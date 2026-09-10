@@ -11,7 +11,7 @@ Use `POST https://api.ateve.ai/v1/search` for direct web search. Every request n
 Authorization: Bearer $ATEVE_API_KEY
 ```
 
-The contract in this skill is synchronized with the current `ateve-service-api` `dev_lcy` implementation and its `API.md`. The current Ateve MCP exposes only `query` and `max_results` and returns `Title`, `URL`, `Published`, and `Snippet` in flat text. Direct API calls expose the fuller request and response contract documented below.
+The contract in this skill is synchronized with the current Ateve Search API implementation and its `API.md`. The current Ateve MCP exposes only `query` and `max_results` and returns `Title`, `URL`, `Published`, and `Snippet` in flat text. Direct API calls expose the fuller request and response contract documented below.
 
 ## Quick start
 
@@ -308,4 +308,4 @@ Use this skill when the caller needs fields or filters that the MCP tool does no
 
 ## Current integration status
 
-The request and response names in this skill have been checked against the latest local `ateve-service-api` `dev_lcy` source and API documentation, including `query`, `limit`, `offset`, `date_range`, `topic`, domain filters, locale, content options, `safe_search`, `snippet`, `raw_content`, images, safety flags, usage, answer, and request IDs. This guide exposes `snippet` as the only result excerpt field. A real-account end-to-end call has not been run in this worktree. Never place a real API key in this file, a script, a commit, or a prompt.
+The request and response names in this skill have been checked against the current Ateve Search API source and API documentation, including `query`, `limit`, `offset`, `date_range`, `topic`, domain filters, locale, content options, `safe_search`, `snippet`, `raw_content`, images, safety flags, usage, answer, and request IDs. This guide exposes `snippet` as the only result excerpt field. A real-account end-to-end call has not been run in this worktree. Never place a real API key in this file, a script, a commit, or a prompt.
