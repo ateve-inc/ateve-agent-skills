@@ -49,7 +49,7 @@ curl -s --max-time 60 -o /dev/null -w '%{http_code}\n' \
 
 ## 返回
 
-官方 SDK 中的 HTTP 返回字段包括 `results[].title`、`url`、`published_at`、`snippet`、`highlights`，耗时为 `latency_ms`。可选字段可能为 null 或省略；不要推测缺失值。合法空结果为 `results: []`。
+官方 SDK 中的 HTTP 返回字段包括 `results[].title`、`url`、`published_at`、`snippet`，耗时为 `latency_ms`。可选字段可能为 null 或省略；不要推测缺失值。合法空结果为 `results: []`。
 
 ## 关键坑位
 
