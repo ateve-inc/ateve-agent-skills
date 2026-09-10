@@ -1,80 +1,311 @@
 ---
 name: ateve-search-api
-description: "直连调用 Ateve Search API 的 cURL / raw HTTP 用法（无 SDK 环境使用）。适用于需要 Ateve 网页搜索、拿到片段与来源 URL 的场景；已装 MCP 的用户请改用 ateve_web_search 工具。"
+description: Call the Ateve Search API directly with cURL or raw HTTP when an MCP connection is unavailable. Use for web search with configurable result content, freshness, topic, domain, locale, safety, pagination, and source metadata; use the Ateve MCP tool when it is installed.
 ---
 
-# Ateve Search API（直连）
+# Ateve Search API
 
-> 需要 API Key：在 Ateve Dashboard 创建，并设置到环境变量 `ATEVE_API_KEY`。
-> Header：`Authorization: Bearer $ATEVE_API_KEY`（Key 只以变量名出现，绝不把值写进命令或日志）。
-> 接口：`POST https://api.ateve.ai/v1/search`。请求字段和响应字段已按官方 SDK 与 `ateve-service-api` 校准；真实账号联调仍待执行。
+Use `POST https://api.ateve.ai/v1/search` for direct web search. Every request needs an Ateve API key in the `Authorization` header:
 
-## Quick Start (cURL)
+```text
+Authorization: Bearer $ATEVE_API_KEY
+```
 
-先检查变量是否存在，只报告变量名，不打印值。使用已经确认的 API 基地址；不要猜测生产 endpoint。若用户选择将凭据保存在本地配置文件，权限应为 `mode 600`，并排除版本控制；只检查权限，不读取或展示 Key。执行请求时关闭 shell 的 `set -x`，不使用 `curl -v` 或 `--trace`。
+The contract in this skill is synchronized with the current `ateve-service-api` `dev_lcy` implementation and its `API.md`. The current Ateve MCP exposes only `query` and `max_results` and returns `Title`, `URL`, `Published`, and `Snippet` in flat text. Direct API calls expose the fuller request and response contract documented below.
+
+## Quick start
+
+Check that the key exists without printing its value. Keep shell tracing off. Do not use `curl -v`, `--trace`, or a command that puts the key in a URL.
 
 ```bash
-: "${ATEVE_API_KEY:?请先配置 ATEVE_API_KEY}"
-
+: "${ATEVE_API_KEY:?Set ATEVE_API_KEY before calling Ateve Search}"
 
 curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
-  -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ATEVE_API_KEY" \
+  -H "Content-Type: application/json" \
   -d '{
     "query": "latest developments in LLM agents",
     "limit": 3
   }'
 ```
 
-首次连通性检查可只输出 HTTP 状态码，丢弃响应体；这仍会执行一次搜索，不能把它当作零成本的健康检查：
+For a connectivity check that discards the response body and prints only the HTTP status:
 
 ```bash
-: "${ATEVE_API_KEY:?请先配置 ATEVE_API_KEY}"
+: "${ATEVE_API_KEY:?Set ATEVE_API_KEY before calling Ateve Search}"
 
-curl -s --max-time 60 -o /dev/null -w '%{http_code}\n' \
+curl -sS --max-time 60 -o /dev/null -w '%{http_code}\n' \
   -X POST "https://api.ateve.ai/v1/search" \
-  -H "Content-Type: application/json" \
   -H "Authorization: Bearer $ATEVE_API_KEY" \
+  -H "Content-Type: application/json" \
   -d '{"query":"connectivity check","limit":1}'
 ```
 
-`000` 表示没有收到 HTTP 状态码，应结合 curl 退出码排查连接/超时；不能据此声称 API 返回了错误码。不要将未经脱敏的上游错误正文直接粘贴给用户。
+HTTP `000` means that cURL received no HTTP response. Check the cURL exit code, network, TLS, and the configured endpoint. It is not an Ateve status code.
 
-## 参数
+When an agent runs cURL, parse the response locally and pass only the fields needed for the task into the model. Do not paste an unredacted response or upstream error body into the conversation. In particular, do not expose API keys that appear in an unexpected upstream field.
 
-| 参数 | 类型 | 必填 | 默认 | 说明 |
-|---|---|---|---|---|
-| `query` | string | 是 | - | 可独立理解的自然语言搜索请求（指代消解与上下文补齐由调用方完成） |
-| `limit` | integer | 否 | 模板显式传 3 | 返回结果数；SDK 校验范围 1–50，服务端行为待联调 |
+## Request endpoint and authentication
 
-## 返回
+```text
+POST https://api.ateve.ai/v1/search
+Content-Type: application/json
+Authorization: Bearer $ATEVE_API_KEY
+```
 
-官方 SDK 中的 HTTP 返回字段包括 `results[].title`、`url`、`published_at`、`snippet`，耗时为 `latency_ms`。可选字段可能为 null 或省略；不要推测缺失值。合法空结果为 `results: []`。
+The API key starts with `sk_`. Store it in the environment or an approved secret store. If a local file is used for shell configuration, set `mode 600`, keep it out of version control, and check permissions without printing the file contents.
 
-## 关键坑位
+## Request parameters
 
-- Key 只放在 Header / 环境变量；不要写进脚本、日志或 URL Query 参数。
-- 上面的单次 curl 命令没有跨调用连接池与自动重试，最多等待 60 秒。确需重试时仅对 500/502/503/504 重试，最多额外 2 次，退避 1 秒、2 秒；整个搜索含等待共用 60 秒预算，预算耗尽即停止。不要使用会额外重试 429 的通用策略。
-- 只请求片段、控制 `limit`，减少上下文 token。
-- 需要产品级性能（连接复用 / 统一重试 / 错误映射 / 扁平化输出）请改用 Ateve MCP（stdio 或 Hosted Streamable HTTP）。
+Only `query` is required. Omit optional fields when their defaults are sufficient.
 
-## 错误自查
+### Top-level fields
 
-以下是一期约定的处理方向，真实 API 的响应格式仍须核对；不要把推测当成已确认的服务端原因。
+| Field | Type | Required | Default | Contract |
+| --- | --- | --- | --- | --- |
+| `query` | string | Yes | — | 1–2000 characters. Use a self-contained natural-language query. |
+| `content` | object | No | — | Controls per-result content fields. |
+| `limit` | integer | No | `10` | 1–50 results. |
+| `offset` | integer | No | `0` | 0–1000. Use with `limit` for pagination. |
+| `date_range` | string | No | — | Freshness filter; see below. |
+| `topic` | enum | No | `general` | Category hint; see below. |
+| `include_domains` | string[] | No | — | Up to 300 domains. Restricts results. |
+| `exclude_domains` | string[] | No | — | Up to 300 domains. Excludes results. |
+| `locale` | object | No | — | Market, language, and user-location hints. |
+| `safe_search` | boolean | No | `true` | Filters explicit or unsafe content. Set `false` only when requested. |
 
-| 状态/现象 | 下一步 |
-|---|---|
-| 400 / 422 | 检查 JSON、`query` 和 `limit`，不要原样重试 |
-| 401 | 检查 Key 是否已配置、是否有效，以及 Bearer Header；只报告检查结果，不输出值 |
-| 403 | 检查账号权限、套餐或资源访问限制，不自动重试 |
-| 429 | 提示检查额度/套餐，或降低请求频率后稍后再试；当前调用不自动重试 |
-| 500 / 502 / 503 / 504 | 按上述次数、退避与总时间预算重试；仍失败则报告暂不可用 |
-| 其他非成功状态 | 停止并报告状态，不套用瞬时 5xx 重试 |
-| curl 退出码 28 | 超时，停止本轮；不要继续后台重试 |
-| 连接失败 / HTTP `000` | 检查已确认的基地址、网络与 TLS；不要改连其他环境 |
+### Date range
 
-## 联调状态
+`date_range` is one string. Supported forms:
 
-endpoint、请求字段 `query` / `limit` 已由接口示例确认；返回字段按 [官方 SDK](https://github.com/ateve-inc/ateve-sdks/blob/main/js/src/client.ts) 和 `ateve-service-api` 对接，尚未用真实凭据验证返回与错误路径。
+| Form | Meaning |
+| --- | --- |
+| `day`, `week`, `month`, `year` | Preset window ending at the request time (UTC). |
+| `YYYY-MM-DD` | One UTC calendar day. |
+| `YYYY-MM-DD..YYYY-MM-DD` | Closed range; end must be on or after start. |
+| `YYYY-MM-DD..` | From start date through today (UTC). |
+| `..YYYY-MM-DD` | Up to the end date. |
 
-MCP 工具仍使用 `max_results`，调用 API 时转换为 `limit`；不要在直连 curl 中传 MCP 字段名。
+Dates must be real calendar dates. `2026-02-31`, `2026-99-99`, `all`, and `last-week` are invalid. Omit the field when no time filter is needed. For a request such as “last month,” calculate the exact date window before sending the call when a fixed date range is required.
+
+### Topic
+
+Allowed values:
+
+```text
+general | news | paper | docs | code | forum | wiki | people | company |
+personal_site | financial_report | government | ecommerce
+```
+
+Use `general` when there is no category bias. Use `news` for news, `paper` for academic papers, `docs` for product or API documentation, `code` for repositories/issues/PRs, `forum` for community discussions, `wiki` for encyclopedia pages, `people` for profiles, `company` for organizations, `personal_site` for personal sites, `financial_report` for filings and annual reports, `government` for government sources, and `ecommerce` for shopping pages.
+
+### Domain filters
+
+Use arrays of host names:
+
+```json
+{
+  "include_domains": ["openai.com", "anthropic.com"],
+  "exclude_domains": ["pinterest.com"]
+}
+```
+
+Each array accepts at most 300 entries. Invalid domains and oversized arrays return a validation error.
+
+### Locale
+
+All locale fields are optional:
+
+```json
+{
+  "locale": {
+    "mkt": "US",
+    "language": "en",
+    "user_location": {
+      "country": "US",
+      "region": "California",
+      "city": "San Francisco",
+      "timezone": "America/Los_Angeles"
+    }
+  }
+}
+```
+
+| Field | Constraint | Meaning |
+| --- | --- | --- |
+| `mkt` | Uppercase ISO 3166-1 alpha-2, such as `US` or `JP` | Search-market ranking hint. |
+| `language` | Lowercase ISO 639-1, such as `en` or `ja` | Preferred content language. |
+| `user_location.country` | Uppercase ISO 3166-1 alpha-2 | Physical country of the user. |
+| `user_location.region` | Free text | Region or state. |
+| `user_location.city` | Free text | City. |
+| `user_location.timezone` | IANA time-zone ID | For example, `America/Los_Angeles`; short IDs such as `PST` are rejected. |
+
+`mkt` and `user_location.country` describe different things. A user in Japan can search the US market.
+
+### Content options
+
+Content options apply to every item in `results`:
+
+| Field | Type | Default | Effect |
+| --- | --- | --- | --- |
+| `content.snippet` | boolean | `true` | Include a short excerpt. `false` omits `snippet`. |
+| `content.raw_content` | boolean | `false` | Include the extracted page body when `true`. |
+| `content.format` | enum | `text` | `text` strips Markdown; `markdown` preserves Markdown. Applies to `snippet` and `raw_content`. |
+| `content.summary` | boolean | `false` | Include per-result `summary`; the value can be `null`. |
+| `content.images` | integer | `3` | 0–10 images per result. `0` returns an empty array. |
+| `content.favicon` | boolean | `true` | Include a favicon URL; `false` omits it. |
+
+Request only the content needed by the task. `raw_content`, `summary`, and images can increase response size and processing time.
+
+## Examples
+
+### Fresh news with a snippet
+
+```bash
+curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
+  -H "Authorization: Bearer $ATEVE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "AI regulation updates",
+    "limit": 5,
+    "date_range": "month",
+    "topic": "news",
+    "include_domains": ["reuters.com", "bbc.com"],
+    "content": {"snippet": true, "raw_content": false, "images": 0}
+  }'
+```
+
+### Full direct API request
+
+```bash
+curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
+  -H "Authorization: Bearer $ATEVE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "query": "Ateve Search API integration guide",
+    "content": {
+      "snippet": true,
+      "raw_content": true,
+      "format": "markdown",
+      "summary": true,
+      "images": 2,
+      "favicon": true
+    },
+    "limit": 3,
+    "offset": 0,
+    "date_range": "year",
+    "topic": "docs",
+    "include_domains": ["ateve.ai"],
+    "locale": {
+      "mkt": "US",
+      "language": "en",
+      "user_location": {
+        "country": "US",
+        "timezone": "America/Los_Angeles"
+      }
+    },
+    "safe_search": true
+  }'
+```
+
+### Pagination
+
+```json
+{
+  "query": "python web frameworks",
+  "limit": 10,
+  "offset": 10
+}
+```
+
+Use `total_estimated_matches` when it is present. It can be `null` or absent when the provider has no estimate.
+
+## Response
+
+The success body is JSON. `id` is also returned in the `X-Request-Id` response header. Keep that ID when reporting a failure.
+
+### Top-level fields
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Unique request ID; matches `X-Request-Id`. |
+| `created` | Unix epoch seconds in UTC. |
+| `latency_ms` | Server-side processing time. |
+| `query.original` | Original query text. `query.effective` and `query.autoTuned` may be present. |
+| `results` | Ranked result objects. |
+| `news`, `images`, `videos` | Additional result groups when returned by the selected provider path. |
+| `total_estimated_matches` | Estimated match count; may be `null` or absent. |
+| `usage` | Credits and breakdown when billing data is available; absent otherwise. |
+| `answer` | Answer content and citations when the response path returns an answer. |
+
+### Result fields
+
+| Field | Meaning |
+| --- | --- |
+| `id` | Position anchor such as `results.#0`; stable only within this response. |
+| `title` | Page title. |
+| `url` | Canonical result URL. |
+| `display_url` | Display-safe URL with tracking/query parameters removed. |
+| `site_name` | Site or publisher name. |
+| `language` | Detected ISO 639-1 page language. |
+| `published_at` | ISO 8601 UTC timestamp or `null`; the field is always present. |
+| `score` | Relative ranking signal within this response. Do not treat it as an absolute quality score. |
+| `snippet` | Short excerpt when `content.snippet` is enabled. |
+| `raw_content` | Full extracted page body when requested. |
+| `summary` | Present when requested; can be `null`. |
+| `favicon` | Favicon URL when enabled. |
+| `images` | Always an array, possibly empty. Image objects have `url`, `width`, `height`, and `alt`; the latter three can be `null`. |
+| `is_safe` | Safety classifier result; always present. |
+
+`snippet` and `raw_content` follow `content.format`. Direct API callers can request `raw_content`, `summary`, images, or favicon independently. The Ateve MCP keeps its model-facing output to the `Snippet` field.
+
+## Error handling
+
+Non-2xx responses use a JSON envelope like this:
+
+```json
+{
+  "id": "req_...",
+  "error": {
+    "code": "invalid_parameter",
+    "message": "...",
+    "param": "date_range",
+    "type": "invalid_request_error"
+  }
+}
+```
+
+Do not copy the raw error body into the model context. Extract the status, safe error code, parameter name, and request ID. Current documented statuses:
+
+| Status | Meaning | Action |
+| --- | --- | --- |
+| `400` | Invalid or missing request field | Fix the request; do not retry unchanged. |
+| `401` | Missing, malformed, or invalid Bearer key | Check `ATEVE_API_KEY` without printing it. |
+| `402` | Not a current `/v1/search` status in the API contract | Do not invent handling; verify the deployed contract if encountered. |
+| `403` | Insufficient prepay credit or postpay credit limit | Check account balance or plan. |
+| `404` | Unknown route | Check the exact `/v1/search` path. |
+| `405` | Method not allowed | Use `POST`. |
+| `415` | Missing or wrong content type | Send `Content-Type: application/json`. |
+| `429` | Rate limit exceeded | Slow down and retry later according to the account policy. |
+| `500` | Internal server error | Retry only as part of a bounded retry policy. |
+| `502` | Upstream search service unavailable | Retry only as part of a bounded retry policy. |
+| `504` | Upstream search service timeout | Retry only as part of a bounded retry policy. |
+
+For a client-side retry wrapper, retry only temporary `500`, `502`, `503` (if emitted by a deployment), and `504` responses, at most two additional attempts with approximately 1 second and 2 seconds of backoff. Share one 60-second deadline across the request and retries. Do not automatically retry `400`, `401`, `402`, `403`, or `429`.
+
+## Direct API versus MCP
+
+```text
+Direct API Skill                         Ateve MCP
+POST /v1/search                          ateve_web_search
+Full request contract                    query + max_results only
+Optional content controls                Snippet-only model-facing output
+Raw JSON response                        Flat text: Title / URL / Published / Snippet
+Caller owns parsing, retry, and redaction MCP owns mapping, timeout, and redaction
+```
+
+Use this skill when the caller needs fields or filters that the MCP tool does not expose. Use MCP for the stable agent-facing search interface and its flat response format.
+
+## Current integration status
+
+The request and response names in this skill have been checked against the latest local `ateve-service-api` `dev_lcy` source and API documentation, including `query`, `limit`, `offset`, `date_range`, `topic`, domain filters, locale, content options, `safe_search`, `snippet`, `raw_content`, images, safety flags, usage, answer, and request IDs. This guide exposes `snippet` as the only result excerpt field. A real-account end-to-end call has not been run in this worktree. Never place a real API key in this file, a script, a commit, or a prompt.
