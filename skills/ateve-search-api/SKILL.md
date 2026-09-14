@@ -1,6 +1,6 @@
 ---
 name: ateve-search-api
-description: Call the Ateve Search API directly with cURL or raw HTTP when MCP is unavailable or does not expose the supported option needed by the caller. Use for web search with the currently effective result-content, freshness, domain, safety, and pagination options.
+description: Call the Ateve Search API directly with cURL or raw HTTP. Use when an agent needs web search through the API, including search snippets, source URLs, date and domain filters, or pagination.
 ---
 
 # Ateve Search API
@@ -11,7 +11,7 @@ Use `POST https://api.ateve.ai/v1/search` for direct web search. Every request n
 Authorization: Bearer $ATEVE_API_KEY
 ```
 
-This skill documents the currently supported request options. Direct API calls expose the JSON request and response contract described below.
+This skill covers search queries, pagination, and date and domain filters. Omit content controls and use the API's default result fields. The API response remains JSON; no MCP connection is required.
 
 ## Quick start
 
@@ -64,13 +64,11 @@ Only `query` is required. Omit optional fields when their defaults are sufficien
 | Field | Type | Required | Default | Contract |
 | --- | --- | --- | --- | --- |
 | `query` | string | Yes | — | 1–2000 characters. Use a self-contained natural-language query. |
-| `content` | object | No | — | Controls per-result content fields. |
 | `limit` | integer | No | `10` | 1–50 results. |
-| `offset` | integer | No | `0` | 0–1000. Use with `limit` for pagination. |
+| `offset` | integer | No | `0` | 0–99. Use with `limit` for pagination; only the first 100 results can be paged through. |
 | `date_range` | string | No | — | Freshness filter; see below. |
-| `include_domains` | string[] | No | — | Up to 100 effective entries. |
-| `exclude_domains` | string[] | No | — | Up to 100 effective entries. |
-| `safe_search` | boolean | No | `true` | Filters explicit or unsafe content. Set `false` only when requested. |
+| `include_domains` | string[] | No | — | Restrict results to these domains; at most 300 entries. |
+| `exclude_domains` | string[] | No | — | Exclude results from these domains; at most 300 entries. |
 
 ### Date range
 
@@ -97,25 +95,15 @@ Use arrays of host names:
 }
 ```
 
-Use at most 100 entries in each array. The service does not validate the format of individual domain strings; extra entries beyond the first 100 do not affect the search.
-
-### Content options
-
-Content options apply to every item in `results`:
-
-| Field | Type | Default | Effect |
-| --- | --- | --- | --- |
-| `content.snippet` | boolean | `true` | Include a short excerpt. `false` omits `snippet`. |
-| `content.raw_content` | boolean | `false` | Include the extracted page body when `true`. |
-| `content.format` | enum | `text` | `text` strips Markdown; `markdown` preserves Markdown. Applies to `snippet` and `raw_content`. |
-| `content.images` | integer | `3` | 0–10 images per result. `0` returns an empty array. |
-| `content.favicon` | boolean | `true` | Include a favicon URL; `false` omits it. |
-
-Request only the content needed by the task. `raw_content` and images can increase response size and processing time.
+Use host names rather than URLs or `site:` expressions, and use at most 300 entries in each array. Do not assume that a `site:` expression embedded in `query` is interpreted as a domain filter.
 
 ## Examples
 
-### Search with a snippet
+Use the minimal request in Quick start for ordinary searches. The following examples are scenario-specific; add their filters only when the user asks for them.
+
+### Search recent news from specified sources
+
+Use this pattern only when the user requests recent results limited to the specified sources.
 
 ```bash
 curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
@@ -125,31 +113,7 @@ curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
     "query": "AI regulation updates",
     "limit": 5,
     "date_range": "month",
-    "include_domains": ["reuters.com", "bbc.com"],
-    "content": {"snippet": true, "raw_content": false, "images": 0}
-  }'
-```
-
-### Full direct API request
-
-```bash
-curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
-  -H "Authorization: Bearer $ATEVE_API_KEY" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "query": "Ateve Search API integration guide",
-    "content": {
-      "snippet": true,
-      "raw_content": true,
-      "format": "markdown",
-      "images": 2,
-      "favicon": true
-    },
-    "limit": 3,
-    "offset": 0,
-    "date_range": "year",
-    "include_domains": ["ateve.ai"],
-    "safe_search": true
+    "include_domains": ["reuters.com", "bbc.com"]
   }'
 ```
 
@@ -163,7 +127,7 @@ curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
 }
 ```
 
-Use `total_estimated_matches` when it is present. It can be `null` or absent when no estimate is available.
+The API caps the effective `limit` at `100 - offset`. For example, `limit: 10` with `offset: 95` can return at most 5 results. Stop at offset 100 or when no more results are returned. `total_estimated_matches` is an estimate, not permission to page past this limit; it can be `null` or absent.
 
 ## Response
 
@@ -193,13 +157,14 @@ The success body is JSON. `id` is also returned in the `X-Request-Id` response h
 | `language` | Detected ISO 639-1 page language. |
 | `published_at` | ISO 8601 UTC timestamp or `null`; the field is always present. |
 | `score` | Relative ranking signal within this response. Do not treat it as an absolute quality score. |
-| `snippet` | Short excerpt when `content.snippet` is enabled. |
-| `raw_content` | Full extracted page body when requested. |
-| `favicon` | Favicon URL when enabled. |
+| `snippet` | Short excerpt returned with the default search results, when available. |
+| `favicon` | Favicon URL when available. |
 | `images` | Always an array, possibly empty. Image objects have `url`, `width`, `height`, and `alt`; the latter three can be `null`. |
 | `is_safe` | Safety classifier result; always present. |
 
-`snippet` and `raw_content` follow `content.format`. Direct API callers can request `raw_content`, images, or favicon independently.
+Preserve the API's JSON response, including any additional fields. An empty `images` array is valid; do not promise that each result contains images. Use titles, URLs, and snippets to decide which sources matter. If the task needs a full page, use an available page-fetch tool on selected URLs rather than adding content controls to this search request.
+
+When answering the user, cite the returned source URLs and distinguish the result snippets from pages actually fetched. An empty result set means this search returned no matches, not that the subject does not exist.
 
 ## Error handling
 
@@ -223,7 +188,8 @@ Do not copy the raw error body into the model context. Extract the status, safe 
 | --- | --- | --- |
 | `400` | Invalid or missing request field | Fix the request; do not retry unchanged. |
 | `401` | Missing, malformed, or invalid Bearer key | Check `ATEVE_API_KEY` without printing it. |
-| `403` | Insufficient prepay credit or postpay credit limit | Check account balance or plan. |
+| `402` | Insufficient credit | Check account balance and the returned error code. |
+| `403` | Team access is suspended or payment review is required | Check the returned error code and account status. |
 | `404` | Unknown route | Check the exact `/v1/search` path. |
 | `405` | Method not allowed | Use `POST`. |
 | `415` | Missing or wrong content type | Send `Content-Type: application/json`. |
@@ -232,16 +198,8 @@ Do not copy the raw error body into the model context. Extract the status, safe 
 | `502` | Upstream search service unavailable | Retry only as part of a bounded retry policy. |
 | `504` | Upstream search service timeout | Retry only as part of a bounded retry policy. |
 
-For a client-side retry wrapper, retry only temporary `500`, `502`, and `504` responses, at most two additional attempts with approximately 1 second and 2 seconds of backoff. Share one 60-second deadline across the request and retries. Do not automatically retry `400`, `401`, `403`, or `429`.
+A timeout can occur after a billable search has already executed. Do not retry automatically. Let the caller decide whether to retry within its request budget and deadline; do not retry an unchanged invalid request or an authentication, credit, or access failure.
 
 ## Direct API versus MCP
 
-```text
-Direct API Skill                         Ateve MCP
-POST /v1/search                          ateve_web_search
-Supported request options                query + max_results only
-Raw JSON response                        Title / URL / Published (when available) / Snippet; no raw_content
-Caller owns parsing, retry, and redaction MCP owns mapping, timeout, and redaction
-```
-
-Use this skill when the caller needs fields or filters that the MCP tool does not expose. Use MCP for the stable agent-facing search interface and its flat response format.
+Use this skill for direct HTTP access to `POST /v1/search` and the API's JSON response. For an MCP connection, use `ateve_web_search` and its current tool schema. The two integrations do not have to expose identical parameter sets.

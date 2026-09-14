@@ -1,0 +1,44 @@
+{
+  "name": "ateve-agent-skills",
+  "version": "0.1.0",
+  "description": "Install the official Ateve Search API skill for AI coding agents.",
+  "license": "Apache-2.0",
+  "author": "Ateve Inc.",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ateve-inc/ateve-agent-skills.git"
+  },
+  "homepage": "https://github.com/ateve-inc/ateve-agent-skills#readme",
+  "bugs": {
+    "url": "https://github.com/ateve-inc/ateve-agent-skills/issues"
+  },
+  "keywords": [
+    "ateve",
+    "agent-skills",
+    "ai-agents",
+    "codex",
+    "search"
+  ],
+  "type": "module",
+  "bin": {
+    "ateve-agent-skills": "bin/cli.mjs"
+  },
+  "files": [
+    "bin",
+    "skills",
+    "README.md",
+    "LICENSE",
+    "CHANGELOG.md"
+  ],
+  "engines": {
+    "node": ">=22.20.0"
+  },
+  "scripts": {
+    "test": "node --test",
+    "pack:check": "npm pack --dry-run",
+    "prepublishOnly": "npm test && npm run pack:check"
+  },
+  "dependencies": {
+    "skills": "1.5.26"
+  }
+}
