@@ -11,27 +11,29 @@ Official agent skills for the [Ateve Search API](https://ateve.ai/). Give your c
 Requires Node.js 22.20.0 or later. Install the skill in your current project:
 
 ```bash
-npx ateve-agent-skills@latest --agent codex
+npx skills add ateve-inc/ateve-agent-skills --skill ateve-search-api --agent codex
 ```
 
 For Claude Code or Cursor:
 
 ```bash
-npx ateve-agent-skills@latest --agent claude-code
-npx ateve-agent-skills@latest --agent cursor
+npx skills add ateve-inc/ateve-agent-skills --skill ateve-search-api --agent claude-code
+npx skills add ateve-inc/ateve-agent-skills --skill ateve-search-api --agent cursor
 ```
 
 Add `--global` to install for your user account instead of the current project. Add `--yes` to accept the installer's prompts. Without `--agent`, the installer lets you select the target agents.
 
-The npm command installs the Skill bundled in that package version using the [Skills CLI](https://github.com/vercel-labs/skills). For a reproducible installation, pin a version such as `ateve-agent-skills@0.1.0`.
+These commands use the [Skills CLI](https://github.com/vercel-labs/skills). Or copy `skills/ateve-search-api/` to your agent's supported skill directory. Follow your agent's instructions to reload or discover newly installed skills.
 
-You can also install directly from this repository:
+### npm package
+
+The `ateve-agent-skills` package is prepared for its first npm release. Until it is published, use the GitHub installation commands above. After publication, the equivalent versioned command will be:
 
 ```bash
-npx skills add ateve-inc/ateve-agent-skills --skill ateve-search-api
+npx ateve-agent-skills@0.1.0 --agent codex
 ```
 
-Or copy `skills/ateve-search-api/` to your agent's supported skill directory. Follow your agent's instructions to reload or discover newly installed skills.
+The package bundles the Skill and installs that version using the same installer. The `--agent`, `--global`, and `--yes` options work as above.
 
 ## Set up and use
 
