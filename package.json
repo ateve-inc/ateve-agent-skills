@@ -1,5 +1,5 @@
 {
-  "name": "@ateve-ai/agent-skills",
+  "name": "@ateve/agent-skills",
   "version": "0.1.0",
   "description": "Install the official Ateve Search API skill for AI coding agents.",
   "license": "Apache-2.0",
