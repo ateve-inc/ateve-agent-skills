@@ -29,7 +29,7 @@ curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
   }'
 ```
 
-For a connectivity check that discards the response body and prints only the HTTP status:
+To send a minimal live search request and print only its HTTP status (this request may consume account credits):
 
 ```bash
 : "${ATEVE_API_KEY:?Set ATEVE_API_KEY before calling Ateve Search}"
@@ -38,7 +38,7 @@ curl -sS --max-time 60 -o /dev/null -w '%{http_code}\n' \
   -X POST "https://api.ateve.ai/v1/search" \
   -H "Authorization: Bearer $ATEVE_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"query":"connectivity check","limit":1}'
+  -d '{"query":"example search","limit":1}'
 ```
 
 HTTP `000` means that cURL received no HTTP response. Check the cURL exit code, network, TLS, and the configured endpoint. It is not an Ateve status code.

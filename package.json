@@ -1,14 +1,14 @@
 {
   "name": "@ateve/agent-skills",
-  "version": "0.1.0",
-  "description": "Install the official Ateve Search API skill for AI coding agents.",
+  "version": "0.1.1",
+  "description": "Ateve Search API skill and installer for coding agents, including Codex, Claude Code, and Cursor.",
   "license": "Apache-2.0",
   "author": "Ateve Inc.",
   "repository": {
     "type": "git",
     "url": "https://github.com/ateve-inc/ateve-agent-skills.git"
   },
-  "homepage": "https://github.com/ateve-inc/ateve-agent-skills#readme",
+  "homepage": "https://ateve.ai/",
   "bugs": {
     "url": "https://github.com/ateve-inc/ateve-agent-skills/issues"
   },
