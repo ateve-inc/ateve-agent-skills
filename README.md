@@ -50,7 +50,7 @@ After installation and API key setup, ask your agent:
 
 The skill documents requests to `POST https://api.ateve.ai/v1/search`, including:
 
-- Search queries and pagination using `query`, `limit`, and `offset`.
+- Search queries and result-count control using `query` and `maxResults`.
 - Date filtering using `date_range`.
 - Domain filtering using `include_domains` and `exclude_domains`.
 - Reading JSON results, citing sources, and handling API errors.

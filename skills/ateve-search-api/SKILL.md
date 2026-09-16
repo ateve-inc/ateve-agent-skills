@@ -1,6 +1,6 @@
 ---
 name: ateve-search-api
-description: Call the Ateve Search API directly with cURL or raw HTTP. Use when an agent needs web search through the API, including search snippets, source URLs, date and domain filters, or pagination.
+description: Call the Ateve Search API directly with cURL or raw HTTP. Use when an agent needs web search through the API, including search snippets, source URLs, date and domain filters, or result-count control.
 ---
 
 # Ateve Search API
@@ -11,7 +11,7 @@ Use `POST https://api.ateve.ai/v1/search` for direct web search. Every request n
 Authorization: Bearer $ATEVE_API_KEY
 ```
 
-This skill covers search queries, pagination, and date and domain filters. Omit content controls and use the API's default result fields. The API response remains JSON; no MCP connection is required.
+This skill covers search queries, result-count control, and date and domain filters. Omit content controls and use the API's default result fields. The API response remains JSON; no MCP connection is required.
 
 ## Quick start
 
@@ -25,7 +25,7 @@ curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "latest developments in LLM agents",
-    "limit": 3
+    "maxResults": 3
   }'
 ```
 
@@ -38,7 +38,7 @@ curl -sS --max-time 60 -o /dev/null -w '%{http_code}\n' \
   -X POST "https://api.ateve.ai/v1/search" \
   -H "Authorization: Bearer $ATEVE_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"query":"example search","limit":1}'
+  -d '{"query":"example search","maxResults":1}'
 ```
 
 HTTP `000` means that cURL received no HTTP response. Check the cURL exit code, network, TLS, and the configured endpoint. It is not an Ateve status code.
@@ -64,8 +64,7 @@ Only `query` is required. Omit optional fields when their defaults are sufficien
 | Field | Type | Required | Default | Contract |
 | --- | --- | --- | --- | --- |
 | `query` | string | Yes | — | 1–2000 characters. Use a self-contained natural-language query. |
-| `limit` | integer | No | `10` | 1–50 results. |
-| `offset` | integer | No | `0` | 0–99. Use with `limit` for pagination; only the first 100 results can be paged through. |
+| `maxResults` | integer | No | `10` | 1–100 results. |
 | `date_range` | string | No | — | Freshness filter; see below. |
 | `include_domains` | string[] | No | — | Restrict results to these domains; at most 300 entries. |
 | `exclude_domains` | string[] | No | — | Exclude results from these domains; at most 300 entries. |
@@ -103,7 +102,7 @@ Use the minimal request in Quick start for ordinary searches. The following exam
 
 ### Search recent news from specified sources
 
-Use this pattern only when the user requests recent results limited to the specified sources.
+Use this pattern only when the user requests recent results restricted to the specified sources.
 
 ```bash
 curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
@@ -111,23 +110,15 @@ curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "AI regulation updates",
-    "limit": 5,
+    "maxResults": 5,
     "date_range": "month",
     "include_domains": ["reuters.com", "bbc.com"]
   }'
 ```
 
-### Pagination
+### Result count
 
-```json
-{
-  "query": "python web frameworks",
-  "limit": 10,
-  "offset": 10
-}
-```
-
-The API caps the effective `limit` at `100 - offset`. For example, `limit: 10` with `offset: 95` can return at most 5 results. Stop at offset 100 or when no more results are returned. `total_estimated_matches` is an estimate, not permission to page past this limit; it can be `null` or absent.
+`maxResults` controls the maximum number of results returned in one request. It defaults to `10` and accepts integers from `1` through `100`. The service may return fewer results when the query has fewer relevant matches. `total_estimated_matches` is an estimate and may be `null` or absent.
 
 ## Response
 
@@ -193,7 +184,7 @@ Do not copy the raw error body into the model context. Extract the status, safe 
 | `404` | Unknown route | Check the exact `/v1/search` path. |
 | `405` | Method not allowed | Use `POST`. |
 | `415` | Missing or wrong content type | Send `Content-Type: application/json`. |
-| `429` | Rate limit exceeded | Slow down and retry later according to the account policy. |
+| `429` | Request rate exceeded | Slow down and retry later according to the account policy. |
 | `500` | Internal server error | Retry only as part of a bounded retry policy. |
 | `502` | Upstream search service unavailable | Retry only as part of a bounded retry policy. |
 | `504` | Upstream search service timeout | Retry only as part of a bounded retry policy. |

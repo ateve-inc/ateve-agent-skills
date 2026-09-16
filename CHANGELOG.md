@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.2 - 2026-09-16
+
+- Replace the public result-count and paging inputs with `maxResults`.
+- Set the accepted result-count range to 1–100 with a default of 10.
+- Remove the retired input names from the bundled skill instructions.
+
 ## 0.1.1 - 2026-09-15
 
 - Use `@ateve/agent-skills` consistently as the npm package name and installation entry point.

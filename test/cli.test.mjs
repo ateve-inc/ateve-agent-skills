@@ -34,7 +34,10 @@ test("packed CLI forwards installer options and installs only into an isolated p
 
     assert.equal(result.status, 0, result.stderr);
     const installedSkill = join(project, ".agents", "skills", "ateve-search-api", "SKILL.md");
-    assert.match(readFileSync(installedSkill, "utf8"), /Ateve Search API/);
+    const installedSkillText = readFileSync(installedSkill, "utf8");
+    assert.match(installedSkillText, /Ateve Search API/);
+    assert.match(installedSkillText, /maxResults/);
+    assert.doesNotMatch(installedSkillText, /limit|offset/i);
 
     const globalResult = spawnSync(cli, ["--global", "--agent", "codex", "--yes"], {
       cwd: project,
@@ -44,7 +47,10 @@ test("packed CLI forwards installer options and installs only into an isolated p
 
     assert.equal(globalResult.status, 0, globalResult.stderr);
     const globalSkill = join(home, ".agents", "skills", "ateve-search-api", "SKILL.md");
-    assert.match(readFileSync(globalSkill, "utf8"), /Ateve Search API/);
+    const globalSkillText = readFileSync(globalSkill, "utf8");
+    assert.match(globalSkillText, /Ateve Search API/);
+    assert.match(globalSkillText, /maxResults/);
+    assert.doesNotMatch(globalSkillText, /limit|offset/i);
   } finally {
     // npm creates the tarball in the package root; remove only this known test artifact.
     const cleanup = spawnSync("rm", ["-f", tarball]);
