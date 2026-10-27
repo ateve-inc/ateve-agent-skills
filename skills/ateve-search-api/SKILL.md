@@ -1,6 +1,6 @@
 ---
 name: ateve-search-api
-description: Call the Ateve Search API directly with cURL or raw HTTP. Use when an agent needs web search through the API, including search snippets, source URLs, date and domain filters, or result-count control.
+description: Call the Ateve Search API directly with cURL or raw HTTP. Use when an agent needs web search through the API, including search snippets, highlights, source URLs, date and domain filters, or result-count control.
 ---
 
 # Ateve Search API
@@ -11,7 +11,7 @@ Use `POST https://api.ateve.ai/v1/search` for direct web search. Every request n
 Authorization: Bearer $ATEVE_API_KEY
 ```
 
-This skill covers search queries, result-count control, and date and domain filters. Omit content controls and use the API's default result fields. The API response remains JSON; no MCP connection is required.
+This skill covers search queries, result-count control, date and domain filters, and optional highlights. Omit content controls when the API's default result fields are sufficient. The API response remains JSON; no MCP connection is required.
 
 ## Quick start
 
@@ -68,6 +68,20 @@ Only `query` is required. Omit optional fields when their defaults are sufficien
 | `date_range` | string | No | — | Freshness filter; see below. |
 | `include_domains` | string[] | No | — | Restrict results to these domains; at most 300 entries. |
 | `exclude_domains` | string[] | No | — | Exclude results from these domains; at most 300 entries. |
+| `content` | object | No | — | Optional result content controls; see highlights below. |
+
+### Highlights
+
+Set `content.highlight` to `true` to request short matching excerpts. It is a boolean and defaults to `false`. For example:
+
+```json
+{
+  "query": "AI research",
+  "content": { "highlight": true }
+}
+```
+
+When enabled, each result's `highlights` field is an array of strings; it is empty when there are no matches. When disabled, the field is omitted. Continue using available snippets and source URLs when highlights are empty.
 
 ### Date range
 
@@ -149,11 +163,12 @@ The success body is JSON. `id` is also returned in the `X-Request-Id` response h
 | `published_at` | ISO 8601 UTC timestamp or `null`; the field is always present. |
 | `score` | Relative ranking signal within this response. Do not treat it as an absolute quality score. |
 | `snippet` | Short excerpt returned with the default search results, when available. |
+| `highlights` | Array of short matching excerpts when requested; empty when there are no matches, omitted when disabled. |
 | `favicon` | Favicon URL when available. |
 | `images` | Always an array, possibly empty. Image objects have `url`, `width`, `height`, and `alt`; the latter three can be `null`. |
 | `is_safe` | Safety classifier result; always present. |
 
-Preserve the API's JSON response, including any additional fields. An empty `images` array is valid; do not promise that each result contains images. Use titles, URLs, and snippets to decide which sources matter. If the task needs a full page, use an available page-fetch tool on selected URLs rather than adding content controls to this search request.
+Preserve the API's JSON response, including any additional fields. An empty `images` array is valid; do not promise that each result contains images. Use titles, URLs, snippets, and available highlights to decide which sources matter. If the task needs a full page, use an available page-fetch tool on selected URLs.
 
 When answering the user, cite the returned source URLs and distinguish the result snippets from pages actually fetched. An empty result set means this search returned no matches, not that the subject does not exist.
 
