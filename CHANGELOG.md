@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.3 - 2026-10-27
+
+- Document optional `content.highlight` requests and the returned `highlights` array.
+- Bundle the agent-readable installation guide and link to it from the README.
+- Verify the packaged guide and highlight documentation in project and user-level installation tests.
+
 ## 0.1.2 - 2026-09-16
 
 - Replace the public result-count and paging inputs with `maxResults`.

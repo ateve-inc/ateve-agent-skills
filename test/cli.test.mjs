@@ -25,6 +25,12 @@ test("packed CLI forwards installer options and installs only into an isolated p
     run("npm", ["init", "--yes"], { cwd: project });
     run("npm", ["install", "--ignore-scripts", tarball], { cwd: project });
 
+    const installedPackage = join(project, "node_modules", "@ateve", "agent-skills");
+    const readme = readFileSync(join(installedPackage, "README.md"), "utf8");
+    const guideLink = readme.match(/\[installation guide\]\(([^)]+)\)/);
+    assert.ok(guideLink, "README must link to the installation guide");
+    assert.match(readFileSync(join(installedPackage, guideLink[1]), "utf8"), /^# Install the Ateve agent skill/m);
+
     const cli = join(project, "node_modules", ".bin", "ateve-agent-skills");
     const result = spawnSync(cli, ["--agent", "codex", "--yes"], {
       cwd: project,
@@ -37,6 +43,8 @@ test("packed CLI forwards installer options and installs only into an isolated p
     const installedSkillText = readFileSync(installedSkill, "utf8");
     assert.match(installedSkillText, /Ateve Search API/);
     assert.match(installedSkillText, /maxResults/);
+    assert.match(installedSkillText, /content\.highlight/);
+    assert.match(installedSkillText, /each result's `highlights` field is an array of strings/);
     assert.doesNotMatch(installedSkillText, /limit|offset/i);
 
     const globalResult = spawnSync(cli, ["--global", "--agent", "codex", "--yes"], {
@@ -50,6 +58,8 @@ test("packed CLI forwards installer options and installs only into an isolated p
     const globalSkillText = readFileSync(globalSkill, "utf8");
     assert.match(globalSkillText, /Ateve Search API/);
     assert.match(globalSkillText, /maxResults/);
+    assert.match(globalSkillText, /content\.highlight/);
+    assert.match(globalSkillText, /each result's `highlights` field is an array of strings/);
     assert.doesNotMatch(globalSkillText, /limit|offset/i);
   } finally {
     // npm creates the tarball in the package root; remove only this known test artifact.

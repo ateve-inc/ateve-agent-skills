@@ -1,6 +1,6 @@
 {
   "name": "@ateve/agent-skills",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Ateve Search API skill and installer for coding agents, including Codex, Claude Code, and Cursor.",
   "license": "Apache-2.0",
   "author": "Ateve Inc.",
@@ -26,6 +26,7 @@
   "files": [
     "bin",
     "skills",
+    "install",
     "README.md",
     "LICENSE",
     "CHANGELOG.md"

@@ -6,6 +6,8 @@ The package currently includes one skill: instructions and examples for searchin
 
 ## Install
 
+For an agent-readable setup workflow, see the [installation guide](install/agent-skills.md). It covers agent selection, installation scope, API key configuration, and verification using this package.
+
 Requires Node.js 22.20.0 or later and npm. Run one of these commands in your project:
 
 ### Codex
@@ -53,6 +55,7 @@ The skill documents requests to `POST https://api.ateve.ai/v1/search`, including
 - Search queries and result-count control using `query` and `maxResults`.
 - Date filtering using `date_range`.
 - Domain filtering using `include_domains` and `exclude_domains`.
+- Optional matching excerpts using `content.highlight` and the returned `highlights` array.
 - Reading JSON results, citing sources, and handling API errors.
 
 Open the installed `ateve-search-api/SKILL.md` for request examples, parameter limits, response fields, and error handling. The same file is included at `skills/ateve-search-api/SKILL.md` in the npm package.
