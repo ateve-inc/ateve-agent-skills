@@ -72,16 +72,20 @@ Only `query` is required. Omit optional fields when their defaults are sufficien
 
 ### Highlights
 
-Set `content.highlight` to `true` to request short matching excerpts. It is a boolean and defaults to `false`. For example:
+Set `content.highlights` to `true` to request short matching excerpts. It is a boolean and defaults to `false`. For example:
 
 ```json
 {
   "query": "AI research",
-  "content": { "highlight": true }
+  "content": { "highlights": true }
 }
 ```
 
-When enabled, each result's `highlights` field is an array of strings; it is empty when there are no matches. When disabled, the field is omitted. Continue using available snippets and source URLs when highlights are empty.
+When enabled, each result's `highlights` field is an array of strings; it is empty when there are no matches. When disabled, the field is omitted.
+
+Every result always includes `snippet` as a string. Snippets cannot be disabled; when no snippet is available, the field is an empty string (`""`). Enabling highlights retains the snippet. Do not send a `content.snippet` switch in new requests.
+
+For token-efficient workflows, prioritize highlights when they provide enough evidence, and use snippets when more context is needed or highlights are empty. Returning both fields does not itself reduce model input tokens; savings depend on which content the agent passes to the model. Keep source URLs with the selected evidence.
 
 ### Date range
 
@@ -132,7 +136,7 @@ curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
 
 ### Result count
 
-`maxResults` controls the maximum number of results returned in one request. It defaults to `10` and accepts integers from `1` through `100`. The service may return fewer results when the query has fewer relevant matches. `total_estimated_matches` is an estimate and may be `null` or absent.
+`maxResults` controls the maximum number of results returned in one request. It defaults to `10` and accepts integers from `1` through `100`. The service may return fewer results when the query has fewer relevant matches.
 
 ## Response
 
@@ -147,7 +151,6 @@ The success body is JSON. `id` is also returned in the `X-Request-Id` response h
 | `latency_ms` | Server-side processing time. |
 | `query.original` | Original query text. |
 | `results` | Ranked result objects. |
-| `total_estimated_matches` | Estimated match count; may be `null` or absent. |
 | `usage` | Credits and breakdown when billing data is available; absent otherwise. |
 
 ### Result fields
@@ -162,7 +165,7 @@ The success body is JSON. `id` is also returned in the `X-Request-Id` response h
 | `language` | Detected ISO 639-1 page language. |
 | `published_at` | ISO 8601 UTC timestamp or `null`; the field is always present. |
 | `score` | Relative ranking signal within this response. Do not treat it as an absolute quality score. |
-| `snippet` | Short excerpt returned with the default search results, when available. |
+| `snippet` | Always-present string that cannot be disabled; empty (`""`) when no snippet is available. Retained when highlights are enabled. |
 | `highlights` | Array of short matching excerpts when requested; empty when there are no matches, omitted when disabled. |
 | `favicon` | Favicon URL when available. |
 | `images` | Always an array, possibly empty. Image objects have `url`, `width`, `height`, and `alt`; the latter three can be `null`. |

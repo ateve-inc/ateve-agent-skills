@@ -2,7 +2,7 @@
 
 The official [Ateve](https://ateve.ai/) npm package for installing the `ateve-search-api` skill in coding agents such as Codex, Claude Code, and Cursor.
 
-The package currently includes one skill: instructions and examples for searching the web with the Ateve Search API. Your agent reads the skill and makes HTTP requests using its shell or HTTP tool. Search results provide source URLs and, when available, snippets and other metadata that the agent can use in its answer.
+The package currently includes one skill: instructions and examples for searching the web with the Ateve Search API. Your agent reads the skill and makes HTTP requests using its shell or HTTP tool. Search results provide source URLs and always include a snippet string, which is empty when no snippet is available. Optional highlights and other metadata can supply additional evidence.
 
 ## Install
 
@@ -55,7 +55,9 @@ The skill documents requests to `POST https://api.ateve.ai/v1/search`, including
 - Search queries and result-count control using `query` and `maxResults`.
 - Date filtering using `date_range`.
 - Domain filtering using `include_domains` and `exclude_domains`.
-- Optional matching excerpts using `content.highlight` and the returned `highlights` array.
+- Optional matching excerpts using `content.highlights` and the returned `highlights` array.
+- Always-present snippets that cannot be disabled, including when highlights are enabled.
+- Prioritizing highlights for token-efficient workflows and using snippets when more context is needed; actual savings depend on what is passed to the model.
 - Reading JSON results, citing sources, and handling API errors.
 
 Open the installed `ateve-search-api/SKILL.md` for request examples, parameter limits, response fields, and error handling. The same file is included at `skills/ateve-search-api/SKILL.md` in the npm package.

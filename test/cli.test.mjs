@@ -43,9 +43,11 @@ test("packed CLI forwards installer options and installs only into an isolated p
     const installedSkillText = readFileSync(installedSkill, "utf8");
     assert.match(installedSkillText, /Ateve Search API/);
     assert.match(installedSkillText, /maxResults/);
-    assert.match(installedSkillText, /content\.highlight/);
+    assert.match(installedSkillText, /content\.highlights\b/);
     assert.match(installedSkillText, /each result's `highlights` field is an array of strings/);
     assert.doesNotMatch(installedSkillText, /limit|offset/i);
+    verifyPublicContract(installedSkillText);
+    verifyPublicContract(readme, false);
 
     const globalResult = spawnSync(cli, ["--global", "--agent", "codex", "--yes"], {
       cwd: project,
@@ -58,9 +60,10 @@ test("packed CLI forwards installer options and installs only into an isolated p
     const globalSkillText = readFileSync(globalSkill, "utf8");
     assert.match(globalSkillText, /Ateve Search API/);
     assert.match(globalSkillText, /maxResults/);
-    assert.match(globalSkillText, /content\.highlight/);
+    assert.match(globalSkillText, /content\.highlights\b/);
     assert.match(globalSkillText, /each result's `highlights` field is an array of strings/);
     assert.doesNotMatch(globalSkillText, /limit|offset/i);
+    verifyPublicContract(globalSkillText);
   } finally {
     // npm creates the tarball in the package root; remove only this known test artifact.
     const cleanup = spawnSync("rm", ["-f", tarball]);
@@ -68,3 +71,25 @@ test("packed CLI forwards installer options and installs only into an isolated p
     rmSync(sandbox, { recursive: true, force: true });
   }
 });
+
+// Check the actual packaged documents and JSON requests users install.
+function verifyPublicContract(text, parseExamples = true) {
+  assert.doesNotMatch(text, /content\.highlight\b|total_estimated_matches|totalEstimatedMatches/);
+  assert.match(text, /cannot be disabled/);
+  assert.match(text, /token-efficient workflows/);
+  if (!parseExamples) return;
+  const examples = [...text.matchAll(/```json\n([\s\S]*?)\n```/g)];
+  assert.ok(examples.length > 0);
+  let enabled = false;
+  for (const [, source] of examples) {
+    const example = JSON.parse(source);
+    if (example.content) {
+      assert.equal(Object.hasOwn(example.content, 'highlight'), false);
+      assert.equal(Object.hasOwn(example.content, 'snippet'), false);
+      enabled ||= example.content.highlights === true;
+    }
+  }
+  assert.ok(enabled, 'Packaged skill must contain a usable highlights request');
+  assert.match(text, /empty string/);
+  assert.match(text, /does not itself reduce model input tokens/);
+}

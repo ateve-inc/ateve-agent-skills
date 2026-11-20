@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.4 - 2026-11-20
+
+- Recommend the canonical `content.highlights` request parameter.
+- Document always-present, non-disableable snippets and empty-string handling.
+- Explain highlights-first evidence selection without promising automatic token savings.
+- Remove retired estimated-match fields from public skill guidance.
+- Verify packaged examples and both project and user-level installations.
+
 ## 0.1.3 - 2026-10-27
 
 - Document optional `content.highlight` requests and the returned `highlights` array.
