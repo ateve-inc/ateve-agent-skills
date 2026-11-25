@@ -71,3 +71,4 @@ For application code, the [Ateve JavaScript/TypeScript SDK](https://www.npmjs.co
 ## License
 
 [Apache-2.0](https://www.apache.org/licenses/LICENSE-2.0).
+The `ateve-search-api` skill also documents allowlisted image and video search through `POST /v1/images` and `POST /v1/videos`. Media calls use `query` and optional `max_results` (1–10), with no charge during the allowlist phase.

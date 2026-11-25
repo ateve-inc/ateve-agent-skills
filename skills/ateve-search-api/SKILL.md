@@ -11,7 +11,23 @@ Use `POST https://api.ateve.ai/v1/search` for direct web search. Every request n
 Authorization: Bearer $ATEVE_API_KEY
 ```
 
-This skill covers search queries, result-count control, date and domain filters, and optional highlights. Omit content controls when the API's default result fields are sufficient. The API response remains JSON; no MCP connection is required.
+This skill covers web, image, and video search through the API. The API response remains JSON; no MCP connection is required.
+
+## Image and video search
+
+Use `POST https://api.ateve.ai/v1/images` when the user asks for pictures, photographs, or illustrations. Use `POST https://api.ateve.ai/v1/videos` for videos, tutorials, or demonstrations. When both are needed, call both endpoints separately. These endpoints currently require the caller's Team to be on the media-search allowlist. Successful media requests are free during the allowlist phase.
+
+Both endpoints require `query` (nonblank string, at most 1,000 characters). Optional `max_results` is an integer from 1 to 10; omission defaults to 10. Use the same Bearer API key as web search. Do not send web-search fields or provider-only filters to these endpoints.
+
+```sh
+curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/images" \
+  -H "Authorization: Bearer $ATEVE_API_KEY" -H "Content-Type: application/json" \
+  -d '{"query":"James Webb Space Telescope photos","max_results":5}'
+```
+
+For images, `results[].url` is the image file; `host_page_url` is the source page; `alt` is alternative text when present. For videos, `results[].url` is the watch page and `embedding_url` is an optional player URL. `site_name`, `description`, `summary`, and `duration_seconds` may be absent. Both responses include `id`, `created`, `latency_ms`, `query.original`, and `results`; an empty `results` array is a successful search with no matches. Do not invent missing metadata or imply a source page has been read just because a media result was returned.
+
+If the user asks for an unpublished filter, explain that the endpoint currently supports only `query` and `max_results`. Search words may express the preference, but that does not guarantee filtering. A 403 `team_not_allowed` means the Team needs media allowlist access. Do not automatically retry a timeout.
 
 ## Quick start
 
