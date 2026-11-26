@@ -2,7 +2,7 @@
 
 The official [Ateve](https://ateve.ai/) npm package for installing the `ateve-search-api` skill in coding agents such as Codex, Claude Code, and Cursor.
 
-The package currently includes one skill: instructions and examples for searching the web with the Ateve Search API. Your agent reads the skill and makes HTTP requests using its shell or HTTP tool. Search results provide source URLs and always include a snippet string, which is empty when no snippet is available. Optional highlights and other metadata can supply additional evidence.
+The package includes one skill with instructions for web, image, and video search through the Ateve Search API. Your agent reads the skill and makes HTTP requests using its shell or HTTP tool. Web results provide source URLs and always include a snippet string, which is empty when no snippet is available. Optional highlights and media metadata can supply additional evidence.
 
 ## Install
 
@@ -42,7 +42,7 @@ In a POSIX-compatible shell, check that the variable is set without printing its
 : "${ATEVE_API_KEY:?Set ATEVE_API_KEY before calling Ateve Search}"
 ```
 
-API requests require a valid key and sufficient account credits. Skill installation and API key configuration are separate steps; running a search uses your Ateve account.
+API requests require a valid key and access to the selected search product. Web search may require account credits; image and video search currently record zero-cost usage. Skill installation and API key configuration are separate steps.
 
 ## Use the skill
 
@@ -59,6 +59,8 @@ The skill documents requests to `POST https://api.ateve.ai/v1/search`, including
 - Always-present snippets that cannot be disabled, including when highlights are enabled.
 - Prioritizing highlights for token-efficient workflows and using snippets when more context is needed; actual savings depend on what is passed to the model.
 - Reading JSON results, citing sources, and handling API errors.
+
+It also documents `POST /v1/images` and `POST /v1/videos`. These endpoints accept `query` and optional `max_results` (1–10), return image or video source URLs and optional media metadata, and have separate Team access rules. For example, ask the agent to find lighthouse images and cite their source pages, or find lighthouse videos and cite their viewing pages.
 
 Open the installed `ateve-search-api/SKILL.md` for request examples, parameter limits, response fields, and error handling. The same file is included at `skills/ateve-search-api/SKILL.md` in the npm package.
 

@@ -1,17 +1,17 @@
 ---
 name: ateve-search-api
-description: Call the Ateve Search API directly with cURL or raw HTTP. Use when an agent needs web search through the API, including search snippets, highlights, source URLs, date and domain filters, or result-count control.
+description: Call the Ateve Search API directly for web, image, or video results using cURL or raw HTTP.
 ---
 
 # Ateve Search API
 
-Use `POST https://api.ateve.ai/v1/search` for direct web search. Every request needs an Ateve API key in the `Authorization` header:
+Use `POST https://api.ateve.ai/v1/search` for web results, `/v1/images` for image results, or `/v1/videos` for video results. Every request needs an Ateve API key in the `Authorization` header:
 
 ```text
 Authorization: Bearer $ATEVE_API_KEY
 ```
 
-This skill covers search queries, result-count control, date and domain filters, and optional highlights. Omit content controls when the API's default result fields are sufficient. The API response remains JSON; no MCP connection is required.
+For web search, this skill covers result-count control, date and domain filters, and optional highlights. Image and video search use a smaller public request contract described below. The API response remains JSON; no MCP connection is required.
 
 ## Quick start
 
@@ -54,6 +54,30 @@ Authorization: Bearer $ATEVE_API_KEY
 ```
 
 The API key starts with `sk_`. Store it in the environment or an approved secret store. If a local file is used for shell configuration, set `mode 600`, keep it out of version control, and check permissions without printing the file contents. Never place a real API key in this file, a script, a commit, or a prompt.
+
+## Image and video search
+
+Choose `/v1/images` when the user needs image files or visual references. Choose `/v1/videos` when the user needs videos or viewing pages. Both use the same Bearer authentication as web search. Their public request body currently accepts only `query` and optional `max_results`: the query is 1–1000 characters, and `max_results` is an integer from 1 to 10 with a default of 10. Web search's `maxResults`, date/domain filters, highlights, and SP-only media filters are not parameters of these endpoints.
+
+```bash
+: "${ATEVE_API_KEY:?Set ATEVE_API_KEY before calling Ateve Search}"
+curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/images" \
+  -H "Authorization: Bearer $ATEVE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"lighthouse at sunset","max_results":3}'
+```
+
+```bash
+: "${ATEVE_API_KEY:?Set ATEVE_API_KEY before calling Ateve Search}"
+curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/videos" \
+  -H "Authorization: Bearer $ATEVE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"query":"how a lighthouse works","max_results":3}'
+```
+
+Both responses contain `id`, `created`, `latency_ms`, `query.original`, and `results`. An empty `results` array is a successful search with no matches. Image entries may include `url` (the image file), `host_page_url` (the containing source page), `title`, `alt`, `width`, `height`, and `published_at`. Video entries may include `url` (the viewing page), `embedding_url`, `title`, `site_name`, `description`, `summary`, `duration_seconds`, `width`, `height`, and `published_at`. Optional fields can be absent or null. Cite the source page for an image when available; use the viewing page for a video. Do not infer reuse rights from an image result.
+
+For external Teams, web, image, and video search require separate access. A `403` with code `team_not_allowed` means this API Key's Team is not authorized for that search product; do not retry it unchanged. Current media success records zero-cost usage and does not consume Search credits.
 
 ## Request parameters
 
@@ -198,8 +222,8 @@ Do not copy the raw error body into the model context. Extract the status, safe 
 | `400` | Invalid or missing request field | Fix the request; do not retry unchanged. |
 | `401` | Missing, malformed, or invalid Bearer key | Check `ATEVE_API_KEY` without printing it. |
 | `402` | Insufficient credit | Check account balance and the returned error code. |
-| `403` | Team access is suspended or payment review is required | Check the returned error code and account status. |
-| `404` | Unknown route | Check the exact `/v1/search` path. |
+| `403` | Team lacks this search product's access, is suspended, or needs payment review | Check the returned error code and account status. |
+| `404` | Unknown route | Check the exact `/v1/search`, `/v1/images`, or `/v1/videos` path. |
 | `405` | Method not allowed | Use `POST`. |
 | `415` | Missing or wrong content type | Send `Content-Type: application/json`. |
 | `429` | Request rate exceeded | Slow down and retry later according to the account policy. |
@@ -211,4 +235,4 @@ A timeout can occur after a billable search has already executed. Do not retry a
 
 ## Direct API versus MCP
 
-Use this skill for direct HTTP access to `POST /v1/search` and the API's JSON response. For an MCP connection, use `ateve_web_search` and its current tool schema. The two integrations do not have to expose identical parameter sets.
+Use this skill for direct HTTP access to the three public endpoints and their JSON responses. For an MCP connection, use `ateve_web_search`, `ateve_image_search`, or `ateve_video_search` according to the requested result type. The integrations do not have to expose identical parameter names.

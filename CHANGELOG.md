@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.5 - 2026-11-26
+
+- Document direct image and video search requests, result fields, and source citation rules.
+- Explain the media request count range and product-specific Team access errors.
+- Keep the existing web search and highlights guidance unchanged.
+
 ## 0.1.4 - 2026-11-20
 
 - Recommend the canonical `content.highlights` request parameter.

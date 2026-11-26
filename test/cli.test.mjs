@@ -47,6 +47,7 @@ test("packed CLI forwards installer options and installs only into an isolated p
     assert.match(installedSkillText, /each result's `highlights` field is an array of strings/);
     assert.doesNotMatch(installedSkillText, /limit|offset/i);
     verifyPublicContract(installedSkillText);
+    verifyMediaContract(installedSkillText);
     verifyPublicContract(readme, false);
 
     const globalResult = spawnSync(cli, ["--global", "--agent", "codex", "--yes"], {
@@ -64,6 +65,7 @@ test("packed CLI forwards installer options and installs only into an isolated p
     assert.match(globalSkillText, /each result's `highlights` field is an array of strings/);
     assert.doesNotMatch(globalSkillText, /limit|offset/i);
     verifyPublicContract(globalSkillText);
+    verifyMediaContract(globalSkillText);
   } finally {
     // npm creates the tarball in the package root; remove only this known test artifact.
     const cleanup = spawnSync("rm", ["-f", tarball]);
@@ -92,4 +94,13 @@ function verifyPublicContract(text, parseExamples = true) {
   assert.ok(enabled, 'Packaged skill must contain a usable highlights request');
   assert.match(text, /empty string/);
   assert.match(text, /does not itself reduce model input tokens/);
+}
+
+function verifyMediaContract(text) {
+  assert.match(text, /https:\/\/api\.ateve\.ai\/v1\/images/);
+  assert.match(text, /https:\/\/api\.ateve\.ai\/v1\/videos/);
+  assert.match(text, /"max_results":3/);
+  assert.match(text, /host_page_url/);
+  assert.match(text, /duration_seconds/);
+  assert.match(text, /team_not_allowed/);
 }
