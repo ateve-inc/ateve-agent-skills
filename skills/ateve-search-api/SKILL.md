@@ -1,11 +1,11 @@
 ---
 name: ateve-search-api
-description: Call the Ateve Search API directly for web, image, or video results using cURL or raw HTTP.
+description: Call Ateve Search, Images, Videos, Fetch, and Jev APIs directly using cURL or raw HTTP.
 ---
 
 # Ateve Search API
 
-Use `POST https://api.ateve.ai/v1/search` for web results, `/v1/images` for image results, or `/v1/videos` for video results. Every request needs an Ateve API key in the `Authorization` header:
+Use `POST https://api.ateve.ai/v1/search` for web results, `/v1/images` for image results, `/v1/videos` for video results, `/v1/fetch` for a known page, or `/v1/systemone` for structured decisions. `GET /v1/models` lists Jev models. Every request needs an Ateve API key in the `Authorization` header:
 
 ```text
 Authorization: Bearer $ATEVE_API_KEY
@@ -25,7 +25,7 @@ curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "latest developments in LLM agents",
-    "maxResults": 3
+    "max_results": 3
   }'
 ```
 
@@ -38,7 +38,7 @@ curl -sS --max-time 60 -o /dev/null -w '%{http_code}\n' \
   -X POST "https://api.ateve.ai/v1/search" \
   -H "Authorization: Bearer $ATEVE_API_KEY" \
   -H "Content-Type: application/json" \
-  -d '{"query":"example search","maxResults":1}'
+  -d '{"query":"example search","max_results":1}'
 ```
 
 HTTP `000` means that cURL received no HTTP response. Check the cURL exit code, network, TLS, and the configured endpoint. It is not an Ateve status code.
@@ -57,7 +57,7 @@ The API key starts with `sk_`. Store it in the environment or an approved secret
 
 ## Image and video search
 
-Choose `/v1/images` when the user needs image files or visual references. Choose `/v1/videos` when the user needs videos or viewing pages. Both use the same Bearer authentication as web search. Their public request body currently accepts only `query` and optional `max_results`: the query is 1–1000 characters, and `max_results` is an integer from 1 to 10 with a default of 10. Web search's `maxResults`, date/domain filters, highlights, and SP-only media filters are not parameters of these endpoints.
+Choose `/v1/images` when the user needs image files or visual references. Choose `/v1/videos` when the user needs videos or viewing pages. Both use the same Bearer authentication as web search. Their public request body currently accepts only `query` and optional `max_results`: the query is 1–1000 characters, and `max_results` is an integer from 1 to 10 with a default of 10. Web search's date/domain filters, highlights, and SP-only media filters are not parameters of these endpoints.
 
 ```bash
 : "${ATEVE_API_KEY:?Set ATEVE_API_KEY before calling Ateve Search}"
@@ -77,9 +77,37 @@ curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/videos" \
 
 Both responses contain `id`, `created`, `latency_ms`, `query.original`, and `results`. An empty `results` array is a successful search with no matches. Image entries may include `url` (the image file), `host_page_url` (the containing source page), `title`, `alt`, `width`, `height`, and `published_at`. Video entries may include `url` (the viewing page), `embedding_url`, `title`, `site_name`, `description`, `summary`, `duration_seconds`, `width`, `height`, and `published_at`. Optional fields can be absent or null. Cite the source page for an image when available; use the viewing page for a video. Do not infer reuse rights from an image result.
 
-For external Teams, web, image, and video search require separate access. A `403` with code `team_not_allowed` means this API Key's Team is not authorized for that search product; do not retry it unchanged. Current media success records zero-cost usage and does not consume Search credits.
+For external Teams, web, image, and video search require separate access. A `403` with code `team_not_allowed` means this API Key's Team is not authorized for that search product; do not retry it unchanged. Images and Videos are PAYG at USD 0.008 per successful request and are outside all plans.
 
-## Request parameters
+## Fetch a known page
+
+Use Fetch when the user supplies a URL or asks to read a selected search result. It returns a title and Markdown content. A login or paywall page can be successful content; inspect it before claiming to have read the target article. The URL must be HTTP(S), have a host, and contain no embedded credentials.
+
+```bash
+: "${ATEVE_API_KEY:?Set ATEVE_API_KEY before calling Ateve}"
+curl -sS --max-time 30 -X POST "https://api.ateve.ai/v1/fetch" \
+  -H "Authorization: Bearer $ATEVE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com/article"}'
+```
+
+The published Fetch plan includes 1,000 successful requests per day for Free and paid plans. Paid plans add monthly allowances of 5,000 (Pro), 25,000 (Max 5x), or 100,000 (Max 20x); unused allowance does not carry forward. Requests beyond plan benefits use USD 0.001 PAYG per successful request. A failed request should not be counted as a success, but a client timeout can follow server success; avoid automatic retries.
+
+## Jev decisions
+
+Use `GET /v1/models` to inspect available models. Submit one shared `state` (string, object, or array) and a `questions` object of 1–32 independent questions. Each question has `type` `choice`, `score`, or `noul`, plus optional `instructions` and applicable `criteria`. Choice needs 2–255 named candidates; Score needs 1–10 ordered levels; Noul estimates the probability that a statement is true. The default model is `ateve-jev-v1`; `ateve-jev-latest` and `jev-latest` are aliases.
+
+```bash
+: "${ATEVE_API_KEY:?Set ATEVE_API_KEY before calling Ateve}"
+curl -sS --max-time 75 -X POST "https://api.ateve.ai/v1/systemone" \
+  -H "Authorization: Bearer $ATEVE_API_KEY" \
+  -H "Content-Type: application/json" \
+  -d '{"state":"The product is easy to use.","questions":{"sentiment":{"type":"choice","criteria":{"positive":"positive review","negative":"negative review"}}}}'
+```
+
+Read the answer under `answers.<question_id>` and preserve the request ID when reporting failures. If `token_budget_exceeded` is returned, shorten the state or split questions rather than treating it as a candidate-count limit. Do not put a key in the state, instructions, or criteria.
+
+## Web search request parameters
 
 Only `query` is required. Omit optional fields when their defaults are sufficient.
 
@@ -88,7 +116,7 @@ Only `query` is required. Omit optional fields when their defaults are sufficien
 | Field | Type | Required | Default | Contract |
 | --- | --- | --- | --- | --- |
 | `query` | string | Yes | — | 1–2000 characters. Use a self-contained natural-language query. |
-| `maxResults` | integer | No | `10` | 1–100 results. |
+| `max_results` | integer | No | `10` | 1–100 results. The legacy `maxResults` alias is accepted; use the canonical spelling. |
 | `date_range` | string | No | — | Freshness filter; see below. |
 | `include_domains` | string[] | No | — | Restrict results to these domains; at most 300 entries. |
 | `exclude_domains` | string[] | No | — | Exclude results from these domains; at most 300 entries. |
@@ -152,7 +180,7 @@ curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
   -H "Content-Type: application/json" \
   -d '{
     "query": "AI regulation updates",
-    "maxResults": 5,
+    "max_results": 5,
     "date_range": "month",
     "include_domains": ["reuters.com", "bbc.com"]
   }'
@@ -160,7 +188,7 @@ curl -sS --max-time 60 -X POST "https://api.ateve.ai/v1/search" \
 
 ### Result count
 
-`maxResults` controls the maximum number of results returned in one request. It defaults to `10` and accepts integers from `1` through `100`. The service may return fewer results when the query has fewer relevant matches.
+`max_results` controls the maximum number of results returned in one request. It defaults to `10` and accepts integers from `1` through `100`. The service may return fewer results when the query has fewer relevant matches.
 
 ## Response
 
@@ -223,7 +251,7 @@ Do not copy the raw error body into the model context. Extract the status, safe 
 | `401` | Missing, malformed, or invalid Bearer key | Check `ATEVE_API_KEY` without printing it. |
 | `402` | Insufficient credit | Check account balance and the returned error code. |
 | `403` | Team lacks this search product's access, is suspended, or needs payment review | Check the returned error code and account status. |
-| `404` | Unknown route | Check the exact `/v1/search`, `/v1/images`, or `/v1/videos` path. |
+| `404` | Unknown route | Check the exact `/v1/search`, `/v1/images`, `/v1/videos`, `/v1/fetch`, `/v1/systemone`, or `/v1/models` path. |
 | `405` | Method not allowed | Use `POST`. |
 | `415` | Missing or wrong content type | Send `Content-Type: application/json`. |
 | `429` | Request rate exceeded | Slow down and retry later according to the account policy. |
@@ -235,4 +263,4 @@ A timeout can occur after a billable search has already executed. Do not retry a
 
 ## Direct API versus MCP
 
-Use this skill for direct HTTP access to the three public endpoints and their JSON responses. For an MCP connection, use `ateve_web_search`, `ateve_image_search`, or `ateve_video_search` according to the requested result type. The integrations do not have to expose identical parameter names.
+Use this skill for direct HTTP access to the public endpoints and their JSON responses. For an MCP connection, use `ateve_web_search`, `ateve_images_search`, `ateve_videos_search`, `fetch`, or `jev` according to the task.

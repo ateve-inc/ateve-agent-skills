@@ -40,6 +40,6 @@ Without a key, finish verifying the installed files and report **skill installed
 
 Confirm the installed file has the frontmatter name `ateve-search-api` and is in a location recognized by the selected agent. Distinguish files installed from skill loaded.
 
-When a key is configured and a live search is within the user's request, use the installed skill to make one verification request with `query: "Ateve search API"` and `maxResults: 1`. It may consume account credits. Verify a 2xx response with a JSON `results` array; an empty array is valid. Follow the skill's error handling, and do not automatically retry a timeout because the search may already have been billed.
+When a key is configured and a live search is within the user's request, use the installed skill to make one verification request with `query: "Ateve search API"` and `max_results: 1`. It may consume account credits. Verify a 2xx response with a JSON `results` array; an empty array is valid. Follow the skill's error handling, and do not automatically retry a timeout because the search may already have been billed.
 
 Report the selected agent, installation scope and location, and whether skill loading, API configuration, and the live check succeeded or remain pending. Do not expose credentials or raw response bodies.

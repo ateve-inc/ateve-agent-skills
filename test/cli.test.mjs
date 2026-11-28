@@ -42,12 +42,13 @@ test("packed CLI forwards installer options and installs only into an isolated p
     const installedSkill = join(project, ".agents", "skills", "ateve-search-api", "SKILL.md");
     const installedSkillText = readFileSync(installedSkill, "utf8");
     assert.match(installedSkillText, /Ateve Search API/);
-    assert.match(installedSkillText, /maxResults/);
+    assert.match(installedSkillText, /max_results/);
     assert.match(installedSkillText, /content\.highlights\b/);
     assert.match(installedSkillText, /each result's `highlights` field is an array of strings/);
-    assert.doesNotMatch(installedSkillText, /limit|offset/i);
+    assert.doesNotMatch(installedSkillText, /["`]limit["`]|["`]offset["`]/i);
     verifyPublicContract(installedSkillText);
     verifyMediaContract(installedSkillText);
+    verifyProductContract(installedSkillText);
     verifyPublicContract(readme, false);
 
     const globalResult = spawnSync(cli, ["--global", "--agent", "codex", "--yes"], {
@@ -60,12 +61,13 @@ test("packed CLI forwards installer options and installs only into an isolated p
     const globalSkill = join(home, ".agents", "skills", "ateve-search-api", "SKILL.md");
     const globalSkillText = readFileSync(globalSkill, "utf8");
     assert.match(globalSkillText, /Ateve Search API/);
-    assert.match(globalSkillText, /maxResults/);
+    assert.match(globalSkillText, /max_results/);
     assert.match(globalSkillText, /content\.highlights\b/);
     assert.match(globalSkillText, /each result's `highlights` field is an array of strings/);
-    assert.doesNotMatch(globalSkillText, /limit|offset/i);
+    assert.doesNotMatch(globalSkillText, /["`]limit["`]|["`]offset["`]/i);
     verifyPublicContract(globalSkillText);
     verifyMediaContract(globalSkillText);
+    verifyProductContract(globalSkillText);
   } finally {
     // npm creates the tarball in the package root; remove only this known test artifact.
     const cleanup = spawnSync("rm", ["-f", tarball]);
@@ -103,4 +105,13 @@ function verifyMediaContract(text) {
   assert.match(text, /host_page_url/);
   assert.match(text, /duration_seconds/);
   assert.match(text, /team_not_allowed/);
+}
+
+function verifyProductContract(text) {
+  assert.match(text, /\/v1\/fetch/);
+  assert.match(text, /\/v1\/systemone/);
+  assert.match(text, /\/v1\/models/);
+  assert.match(text, /token_budget_exceeded/);
+  assert.match(text, /USD 0\.008/);
+  assert.match(text, /1,000 successful requests per day/);
 }

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.1.6 - 2026-11-28
+
+- Document Fetch and Jev direct API requests and the Fetch plan allowance.
+- Use canonical `max_results` for web search and plural MCP media tool names.
+- Correct Images and Videos PAYG pricing guidance.
+
 ## 0.1.5 - 2026-11-26
 
 - Document direct image and video search requests, result fields, and source citation rules.
